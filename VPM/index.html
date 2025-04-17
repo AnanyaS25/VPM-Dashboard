@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Performance Management</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        .hidden { display: none; }
+        .styled-dropdown {
+            width: 200px;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .styled-button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .styled-button:hover {
+            background-color: #0056b3;
+        }
+
+        .comparison-results {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .comparison-results table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .comparison-results th, .comparison-results td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .comparison-results th {
+            background-color: #007bff;
+            color: white;
+        }
+
+        /* Dark mode styles */
+        body.dark-mode {
+            background-color: #181818;
+            color: #f5f5f5;
+        }
+
+        body.dark-mode .styled-button {
+            background-color: #333;
+            color: #f5f5f5;
+        }
+
+        body.dark-mode .styled-button:hover {
+            background-color: #555;
+        }
+
+        body.dark-mode .comparison-results {
+            background-color: #242424;
+            border-color: #555;
+        }
+
+        body.dark-mode .comparison-results th {
+            background-color: #333;
+            color: #ffffff; /* Ensure header text is white */
+        }
+
+        body.dark-mode .comparison-results td {
+            background-color: #2e2e2e; /* Darker background for table cells */
+            color: #ffffff; /* Ensure cell text is white */
+        }
+
+        body.dark-mode .comparison-results td[style*="background-color: #d4edda"] {
+            background-color: #4caf50 !important; /* Adjust highlighted cell color for better contrast */
+            color: #ffffff !important; /* Ensure highlighted text is white */
+        }
+
+        body.dark-mode .card {
+            background-color: #242424;
+            color: #ffffff !important;
+            border: 1px solid #555;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        body.dark-mode .card h3,
+        body.dark-mode .card p,
+        body.dark-mode .card span,
+        body.dark-mode .card a {
+            color: #ffffff !important;
+        }
+
+        /* Dark mode toggle styles */
+        .dark-mode-toggle {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dark-mode-toggle input {
+            display: none;
+        }
+
+        .dark-mode-toggle label {
+            width: 50px;
+            height: 25px;
+            background-color: #ccc;
+            border-radius: 50px;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .dark-mode-toggle label::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            background-color: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 2.5px;
+            left: 2.5px;
+            transition: transform 0.3s ease;
+        }
+
+        .dark-mode-toggle input:checked + label {
+            background-color: #007bff;
+        }
+
+        .dark-mode-toggle input:checked + label::after {
+            transform: translateX(25px);
+        }
+
+        .floating-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            font-size: 28px; /* Adjust emoji size */
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .floating-button:hover {
+            background-color: #0056b3;
+            transform: scale(1.1);
+        }
+
+        .popup {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            width: 300px;
+            display: none;
+            z-index: 1000;
+        }
+
+        body.dark-mode .popup {
+            background-color: #242424;
+            color: #ffffff;
+            border-color: #555;
+        }
+
+        .popup h3 {
+            margin-top: 0;
+        }
+
+        .popup textarea {
+            width: 100%;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 8px;
+            font-size: 14px;
+            background-color: #f9f9f9;
+            color: #000;
+            resize: none; /* Allow typing without resizing */
+        }
+
+        body.dark-mode .popup textarea {
+            background-color: #333;
+            color: #ffffff;
+            border-color: #555;
+        }
+
+        .popup .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: #000;
+        }
+
+        body.dark-mode .popup .close-button {
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Dashboard</h2>
+        <ul>
+            <li><a href="https://lookerstudio.google.com/reporting/059ab9d2-6bd8-4845-8d47-0964edd54c36">Dashboard</a></li>
+            <li><a href="https://docs.google.com/spreadsheets/d/1yHJaJLyy8EuhaCrl0UpBz3uv3nm62YyP8WRdUTFKNzA/edit?gid=1943085624#gid=1943085624">KPI Weightages</a></li>
+            <li><a href="https://docs.google.com/spreadsheets/d/1yHJaJLyy8EuhaCrl0UpBz3uv3nm62YyP8WRdUTFKNzA/edit?gid=0#gid=0">Insights</a></li>
+            <li><a href="#">Price Comparison</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <header>
+            <div class="heading-box">
+                <h1>Vendor Performance Management</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <span>Welcome, <strong> Ananya </strong></span>
+                </div>
+                <div class="notifications">
+                    <a href="https://mail.google.com/mail/u/0/?tab=rm&ogbl#inbox" title="Mail">
+                        <i class="mail-icon" title="Mail"></i>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Vendor Cards Dashboard -->
+        <div class="dashboard hidden" id="dashboard">
+            <!-- Dynamic Vendor KPI Cards Will Be Inserted Here -->
+        </div>
+
+        <h3 style="text-align: center; color: #007bff; font-size: 24px; font-weight: bold;">Compare Vendors</h3>
+
+        <!-- Charts -->
+        <div class="charts hidden" id="charts">
+            <div class="chart-container">
+                <h3>Top 5 Products</h3>
+                <canvas id="topProductsChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Purchase and Sales Orders</h3>
+                <canvas id="purchaseSalesChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Vendor Comparison Section -->
+        <div class="comparison-section hidden" id="comparisonSection">
+            <h3 style="text-align: center; color: #007bff; font-size: 24px; font-weight: bold;">Compare Vendors</h3>
+            <label for="vendor1">Select Vendor 1:</label>
+            <select id="vendor1" name="vendor1">
+                <!-- Vendor options will be added dynamically -->
+            </select>
+            <label for="vendor2">Select Vendor 2:</label>
+            <select id="vendor2" name="vendor2">
+                <!-- Vendor options will be added dynamically -->
+            </select>
+            <button onclick="compareVendors()">Compare</button>
+        </div>
+
+        <!-- Vendor Comparison Dropdowns -->
+        <div style="margin-left: 100px;">
+            <label for="vendorDropdown1">Select Vendor 1:</label>
+            <select id="vendorDropdown1" name="vendorDropdown1" class="styled-dropdown">
+                <!-- Vendor options will be added dynamically -->
+            </select>
+            <label for="vendorDropdown2">Select Vendor 2:</label>
+            <select id="vendorDropdown2" name="vendorDropdown2" class="styled-dropdown">
+                <!-- Vendor options will be added dynamically -->
+            </select>
+            <button class="styled-button" onclick="compareVendors()">Compare</button>
+        </div>
+
+     <!-- Vendor Comparison Results -->
+<div class="comparison-results hidden" id="comparisonResults" style="margin-top: 40px;">
+    <!-- Comparison results will appear here -->
+</div>
+    </div>
+    
+    <div class="dark-mode-toggle">
+        <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode()">
+        <label for="darkModeToggle"></label>
+    </div>
+
+    <!-- Floating Button -->
+    <button class="floating-button" onclick="togglePopup()">💬</button> <!-- Chat bubble emoji -->
+
+    <!-- Popup for Ask Vendor Data -->
+    <div class="popup" id="askVendorPopup">
+        <button class="close-button" onclick="togglePopup()">×</button>
+        <h3>Ask Vendor Data</h3>
+        <textarea id="chatInput" placeholder="Ask about vendor data..." rows="3"></textarea>
+        <button class="styled-button" onclick="askChatbot()">Ask</button>
+        <div id="chatResponse" class="comparison-results hidden"></div>
+        <button class="styled-button" onclick="clearChatbotResponse()">Clear</button> <!-- Clear Button -->
+    </div>
+
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            loadVendorData();
+            showSection('dashboard'); // Show Dashboard by default
+        });
+    
+        let vendorList = []; // To store vendor data
+    
+        // Load and parse CSV data
+        async function loadVendorData() {
+            try {
+                const response = await fetch("Vendor.csv"); // Updated to use Vendor.csv
+                const csvText = await response.text();
+    
+                Papa.parse(csvText, {
+                    skipEmptyLines: true,
+                    complete: function (results) {
+                        vendorList = results.data.slice(3); // Skip header rows if needed
+                        populateVendorDropdowns(vendorList);
+                        displayTopVendors(vendorList);
+                    }
+                });
+            } catch (error) {
+                console.error("❌ Error loading vendor data:", error);
+            }
+        }
+    
+        // Populate dropdowns with vendor names
+        function populateVendorDropdowns(vendors) {
+            let vendor1Dropdown = document.getElementById("vendor1");
+            let vendor2Dropdown = document.getElementById("vendor2");
+            let vendorDropdown1 = document.getElementById("vendorDropdown1");
+            let vendorDropdown2 = document.getElementById("vendorDropdown2");
+    
+            vendors.forEach(vendor => {
+                let option1 = document.createElement("option");
+                let option2 = document.createElement("option");
+                let option3 = document.createElement("option");
+                let option4 = document.createElement("option");
+    
+                option1.value = vendor[0]; // Vendor Name
+                option1.textContent = vendor[0];
+                option2.value = vendor[0];
+                option2.textContent = vendor[0];
+                option3.value = vendor[0];
+                option3.textContent = vendor[0];
+                option4.value = vendor[0];
+                option4.textContent = vendor[0];
+    
+                vendor1Dropdown.appendChild(option1);
+                vendor2Dropdown.appendChild(option2);
+                vendorDropdown1.appendChild(option3);
+                vendorDropdown2.appendChild(option4);
+            });
+        }
+        function compareVendors() {
+    const vendor1Name = document.getElementById("vendorDropdown1").value;
+    const vendor2Name = document.getElementById("vendorDropdown2").value;
+    const comparisonResults = document.getElementById("comparisonResults");
+
+    // Clear previous results
+    comparisonResults.innerHTML = "";
+      // Check if both vendors are the same
+      if (vendor1Name === vendor2Name) {
+        alert("Please choose two different vendors to compare.");
+        return;
+    }
+
+    if (!vendor1Name || !vendor2Name) {
+        alert("Please select both vendors to compare.");
+        return;
+    }
+
+    // Find the selected vendors in the vendorList
+    const vendor1 = vendorList.find(vendor => vendor[0] === vendor1Name);
+    const vendor2 = vendorList.find(vendor => vendor[0] === vendor2Name);
+
+    if (!vendor1 || !vendor2) {
+        comparisonResults.innerHTML = "<p>One or both vendors not found in the data.</p>";
+        return;
+    }
+
+    // Determine which vendor has the higher final score
+    const vendor1Score = parseFloat(vendor1[13]);
+    const vendor2Score = parseFloat(vendor2[13]);
+    const betterVendor = vendor1Score > vendor2Score ? vendor1[0] : vendor2[0];
+    const betterVendorScore = vendor1Score > vendor2Score ? vendor1Score : vendor2Score;
+
+    // Create comparison table
+    const table = document.createElement("table");
+    table.innerHTML = `
+        <thead>
+            <tr>
+                <th>Metric</th>
+                <th>${vendor1[0]}</th>
+                <th>${vendor2[0]}</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Final Score</td>
+                <td style="background-color: ${vendor1Score > vendor2Score ? '#d4edda' : ''};">${vendor1Score.toFixed(2)}</td>
+                <td style="background-color: ${vendor2Score > vendor1Score ? '#d4edda' : ''};">${vendor2Score.toFixed(2)}</td>
+            </tr>
+            <tr>
+                <td>Raw Score</td>
+                <td>${parseFloat(vendor1[11]).toFixed(2)}/${parseFloat(vendor1[12]).toFixed(2)}</td>
+                <td>${parseFloat(vendor2[11]).toFixed(2)}/${parseFloat(vendor2[12]).toFixed(2)}</td>
+            </tr>
+            <tr>
+                <td>Location</td>
+                <td>${vendor1[1]}</td>
+                <td>${vendor2[1]}</td>
+            </tr>
+            <tr>
+                <td>Price Advantage for Larger Quantity</td>
+                <td>${vendor1[4]}</td>
+                <td>${vendor2[4]}</td>
+            </tr>
+            <tr>
+                <td>On-Time Delivery (%)</td>
+                <td>${vendor1[7]}</td>
+                <td>${vendor2[7]}</td>
+            </tr>
+            <tr>
+                <td>First Time Pass</td>
+                <td>${vendor1[6]}</td>
+                <td>${vendor2[6]}</td>
+            </tr>
+              <tr>
+                <td>Order Fulfillment</td>
+                <td>${vendor1[9]}</td>
+                <td>${vendor2[9]}</td>
+            </tr>
+            <tr>
+                <td>Compliance</td>
+                <td>${vendor1[10]}</td>
+                <td>${vendor2[10]}</td>
+            </tr>
+        </tbody>
+    `;
+
+    // Append the table to the comparison results section
+    comparisonResults.appendChild(table);
+
+    // Add an elaborated message indicating which vendor has the better score
+    const message = document.createElement("p");
+    message.style.fontWeight = "bold";
+    message.style.color = "#007bff";
+    message.textContent = `The vendor with the better score is "${betterVendor}" with a final score of ${betterVendorScore.toFixed(2)}.`;
+    comparisonResults.appendChild(message);
+
+    // Make the comparison results section visible
+    comparisonResults.classList.remove("hidden");
+}
+
+        // Display top vendors on dashboard
+        function displayTopVendors(data) {
+    if (data.length < 6) {
+        console.error("🚨 CSV file missing data rows!");
+        return;
+    }
+
+    let vendorData = data.slice(3); // Skip header rows if needed
+    let vendors = vendorData.map(row => ({
+        name: row[0], // Vendor Name
+        location: row[1], // Location
+        categories: row[2], // Categories
+        averagePurchasePrice: row[3], // Average Purchase Price
+        priceAdvantage: row[4], // Price Advantage for Larger Quantity
+        dhu: row[5], // DHU
+        firstTimePass: row[6], // First Time Pass
+        onTimeDelivery: row[7], // On-Time Delivery
+        compliance: row[10], // Compliance
+        rawScore: parseFloat(row[11]), // Raw Score (Column L)
+        maxRawScore: parseFloat(row[12]), // Max Raw Score (Column M)
+        score: parseFloat(row[13]) // Final Score (Column N)
+    }));
+
+    // Sort vendors by score in descending order
+    vendors.sort((a, b) => b.score - a.score);
+
+    // Take top 6 vendors
+    let topVendors = vendors.slice(0, 6);
+
+    let dashboard = document.getElementById("dashboard");
+    dashboard.innerHTML = ""; // Clear existing cards
+
+    topVendors.forEach((vendor, index) => {
+        let card = document.createElement("div");
+        card.classList.add("card");
+
+        // Assign rank based on the index (which is sorted)
+        card.innerHTML = `
+            <h3>Rank: ${index + 1} - ${vendor.name}</h3>
+            <p style="background-color: #F6CFFC; padding: 5px; border-radius: 5px;"><strong>Final Score:</strong> ${vendor.score.toFixed(2)}</p>
+            <p style="background-color: #F6CFFC; padding: 5px; border-radius: 5px;"><strong>Raw Score:</strong> ${vendor.rawScore}/${vendor.maxRawScore}</p>
+            <p><strong>Location:</strong> ${vendor.location}</p>
+            <p><strong>Categories:</strong> ${vendor.categories}</p>
+            <p><strong>Average Purchase Price:</strong> ${vendor.averagePurchasePrice}</p>
+            <p><strong>Price Advantage:</strong> ${vendor.priceAdvantage}</p>
+            <p><strong>DHU:</strong> ${vendor.dhu}</p>
+            <p><strong>First Time Pass:</strong> ${vendor.firstTimePass}</p>
+            <p><strong>On-Time Delivery:</strong> ${vendor.onTimeDelivery}</p>
+            <p><strong>Compliance:</strong> ${vendor.compliance}</p>
+        `;
+
+        dashboard.appendChild(card);
+    });
+}
+        // Function to toggle sections
+        function showSection(sectionId) {
+            const sections = document.querySelectorAll('.comparison-section, .comparison-results, .dashboard, .charts');
+            sections.forEach(section => {
+                section.classList.add('hidden'); // Hide all sections
+            });
+            document.getElementById(sectionId).classList.remove('hidden'); // Show selected section
+        }
+
+        // Dark mode toggle
+        function toggleDarkMode() {
+            const body = document.body;
+            body.classList.toggle('dark-mode');
+        }
+
+    // AI Chatbot to query vendor data
+function askChatbot() {
+    const query = document.getElementById("chatInput").value.toLowerCase();
+    const responseDiv = document.getElementById("chatResponse");
+
+    if (!query) {
+        alert("Please enter a query.");
+        return;
+    }
+
+    const vendor = vendorList.find(v => query.includes(v[0].toLowerCase()));
+    if (vendor) {
+        // Map the relevant columns from Vendor.csv
+        const vendorName = vendor[0]; // Vendor Name (Column A)
+        const location = vendor[1]; // Location (Column B)
+        const categories = vendor[2]; // Categories (Column C)
+        const averagePurchasePrice = vendor[3]; // Average Purchase Price (Column D)
+        const priceAdvantage = vendor[4]; // Price Advantage for Larger Quantity (Column E)
+        const dhu = vendor[5]; // DHU (Defects per Hundred Units) (Column F)
+        const firstTimePass = vendor[6]; // First Time Pass (Column G)
+        const onTimeDelivery = vendor[7]; // On-Time Delivery (Column H)
+        const compliance = vendor[10]; // Compliance (Column K)
+        const rawScore = parseFloat(vendor[11]); // Raw Score (Column L)
+        const maxRawScore = parseFloat(vendor[12]); // Max Raw Score (Column M)
+        const finalScore = parseFloat(vendor[13]); // Final Score (Column N)
+
+        // Generate the response
+        const response = `
+            <h3>Vendor: ${vendorName}</h3>
+            <p><strong>Location:</strong> ${location}</p>
+            <p><strong>Categories:</strong> ${categories}</p>
+            <p><strong>Average Purchase Price:</strong> ${averagePurchasePrice}</p>
+            <p><strong>Price Advantage for Larger Quantity:</strong> ${priceAdvantage}</p>
+            <p><strong>DHU (Defects per Hundred Units):</strong> ${dhu}</p>
+            <p><strong>First Time Pass:</strong> ${firstTimePass}</p>
+            <p><strong>On-Time Delivery:</strong> ${onTimeDelivery}%</p>
+            <p><strong>Compliance:</strong> ${compliance}</p>
+            <p><strong>Raw Score:</strong> ${rawScore}/${maxRawScore}</p>
+            <p><strong>Final Score:</strong> ${finalScore.toFixed(2)}</p>
+        `;
+
+        // Display the response
+        responseDiv.innerHTML = response;
+        responseDiv.classList.remove("hidden");
+    } else {
+        // No matching vendor found
+        responseDiv.innerHTML = "<p>No matching vendor found. Please check your query.</p>";
+        responseDiv.classList.remove("hidden");
+    }
+}
+
+        function togglePopup() {
+            const popup = document.getElementById("askVendorPopup");
+            popup.style.display = popup.style.display === "block" ? "none" : "block";
+        }
+        function clearChatbotResponse() {
+    const responseDiv = document.getElementById("chatResponse");
+    const chatInput = document.getElementById("chatInput");
+
+    // Clear the response and input field
+    responseDiv.innerHTML = "";
+    responseDiv.classList.add("hidden");
+    chatInput.value = "";
+}
+    </script>
+</body>
+</html>
+
